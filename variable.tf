@@ -7,7 +7,7 @@ variable "resource_group_name" {
 variable "location" {
   description = "The Azure region to create the resources in."
   type        = string
-  default     = "East US"
+  default     = "UK South"
 }
 
 variable "cluster_name" {
@@ -31,5 +31,5 @@ variable "node_count" {
 variable "vm_size" {
   description = "The size of the virtual machines for the nodes."
   type        = string
-  default     = "Standard_DS2_v2"
+  default     = "Standard_D2s_v3"
 }

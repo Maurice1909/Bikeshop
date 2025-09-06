@@ -16,22 +16,32 @@ data "azurerm_resource_group" "rg" {
   name = var.resource_group_name
 }
 
-# Create the Azure Kubernetes Service (AKS) cluster
+# Look up existing ACR
+data "azurerm_container_registry" "acr" {
+  name                = "bikeshop" # <-- registry name (before .azurecr.io)
+  resource_group_name = var.resource_group_name
+}
+
+# Attach ACR to AKS
 resource "azurerm_kubernetes_cluster" "aks" {
   name                = var.cluster_name
   location            = data.azurerm_resource_group.rg.location
   resource_group_name = data.azurerm_resource_group.rg.name
   dns_prefix          = var.dns_prefix
 
-  # Define the default node pool for the cluster
-  default_node_pool {
+default_node_pool {
     name       = "default"
     node_count = var.node_count
     vm_size    = var.vm_size
   }
 
-  # Use a system-assigned managed identity for the cluster
-  identity {
+identity {
     type = "SystemAssigned"
   }
+}
+  
+resource "azurerm_role_assignment" "aks_acr_pull" {
+  principal_id         = azurerm_kubernetes_cluster.aks.kubelet_identity[0].object_id
+  role_definition_name = "AcrPull"
+  scope                = data.azurerm_container_registry.acr.id
 }
