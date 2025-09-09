@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bike-shop-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: bike-shop
+  template:
+    metadata:
+      labels:
+        app: bike-shop
+    spec:
+      containers:
+      - name: bike-shop-app
+        image: bikeshop.azurecr.io/simple-bike-shop:v1 # <-- This is the corrected line
+        ports:
+        - containerPort: 5000
