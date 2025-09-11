@@ -1,0 +1,53 @@
+name: AKS CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout the repo
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 2. Login to Azure using Service Principal
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: |
+            {
+              "clientId": "${{ secrets.AZURE_CLIENT_ID }}",
+              "tenantId": "${{ secrets.AZURE_TENANT_ID }}",
+              "subscriptionId": "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+            }
+
+      # 3. Build Docker image and push to ACR with Git SHA tag
+      - name: Build and Push Docker Image
+        run: |
+          IMAGE_TAG=${GITHUB_SHA::7}  # first 7 characters of the commit SHA
+          echo "Using image tag: $IMAGE_TAG"
+          az acr build \
+            --registry ${{ secrets.ACR_NAME }} \
+            --image ${{ secrets.IMAGE_NAME }}:$IMAGE_TAG \
+            .
+
+      # 4. Get AKS credentials
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials \
+            --resource-group ${{ secrets.KUBE_RESOURCE_GROUP }} \
+            --name ${{ secrets.AKS_CLUSTER }} \
+            --overwrite-existing
+
+      # 5. Update deployment with new image
+      - name: Update Kubernetes Deployment
+        run: |
+          IMAGE_TAG=${GITHUB_SHA::7}
+          kubectl set image deployment/bike-shop-deployment \
+            bike-shop-app=${{ secrets.ACR_NAME }}.azurecr.io/${{ secrets.IMAGE_NAME }}:$IMAGE_TAG
+          kubectl rollout status deployment/bike-shop-deployment
+
